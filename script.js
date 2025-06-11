@@ -11,6 +11,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCountry;
     let score = 0;
     let map;
+    let geoData = null; // store loaded GeoJSON
+
+    // Load the GeoJSON file once
+    async function loadGeoData() {
+        if (!geoData) {
+            const response = await fetch('countries.geojson');
+            geoData = await response.json();
+        }
+    }
 
     // Initialize the map
     function initMap() {
@@ -26,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
             hideMapLabels();
         });
 
-        map.on('load', () => {
+        map.on('load', async () => {
             // Add sources and layers once the map is loaded
             map.addSource('country-source', {
                 type: 'geojson',
@@ -57,7 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Start the game
+            // Load GeoJSON data and start the game
+            await loadGeoData();
             displayRandomCountry();
         });
     }
@@ -74,11 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const randomIndex = Math.floor(Math.random() * countriesData.length);
         currentCountry = countriesData[randomIndex];
 
-        // Fetch the country shape from Mapbox
-        fetchCountryShape(currentCountry.code);
+        // Fetch the country shape from the loaded GeoJSON
+        fetchCountryShape();
     }
 
-    // Fetch country shape using Natural Earth data via public GeoJSON
+    // Fetch country shape using local GeoJSON data
     async function fetchCountryShape() {
         try {
             // Fit map to country bounds
@@ -87,14 +97,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 duration: 1000
             });
 
-            // Use a public GeoJSON source for country data
-            const url = `https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson`;
-
-            const response = await fetch(url);
-            const data = await response.json();
+            // Ensure the GeoJSON data is loaded
+            await loadGeoData();
 
             // Find the country by ISO code
-            const countryFeature = data.features.find(feature =>
+            const countryFeature = geoData.features.find(feature =>
                 feature.properties.ISO_A2 === currentCountry.code
             );
 
